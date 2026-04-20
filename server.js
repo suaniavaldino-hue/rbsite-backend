@@ -3,19 +3,25 @@ import cors from "cors";
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "*"
+}));
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
   res.json({ status: "API RB SITE ONLINE 🚀" });
 });
 
-app.post("/gerar-post", (req, res) => {
+app.post("/gerar-post", async (req, res) => {
   const { tema } = req.body;
 
+  const title = `Seu ${tema} pode estar te fazendo perder clientes`;
+  const content = `Muitas empresas não percebem, mas ${tema} mal estruturado afasta clientes todos os dias. Um site estratégico muda completamente o jogo.`;
+
   res.json({
-    title: `Post sobre ${tema}`,
-    content: `Conteúdo gerado automaticamente sobre ${tema}`
+    title,
+    content
   });
 });
 
