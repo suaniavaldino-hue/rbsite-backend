@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+    "@supabase/supabase-js": "^2.0.0"
   },
   "dependencies": {
     "express": "^4.21.2",
