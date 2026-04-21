@@ -1,8 +1,13 @@
-import { createApp } from "./src/app.js";
-import { env } from "./src/config/env.js";
+import express from "express";
 
-const app = createApp();
+const app = express();
 
-app.listen(env.port, () => {
-  console.log(`RB Site backend listening on port ${env.port}`);
+app.get("/", (req, res) => {
+  res.json({ ok: true });
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("rodando");
 });
