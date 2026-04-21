@@ -75,6 +75,47 @@ app.get("/health", (_request, response) => {
   });
 });
 
+app.get("/posts", async (_request, response) => {
+  try {
+    if (!supabase) {
+      response.status(503).json({
+        ok: false,
+        message: "Supabase nao configurado no Railway.",
+      });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from(env.supabaseTable)
+      .select("id, title, type, content, status, created_at")
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(20);
+
+    if (error) {
+      console.error("SUPABASE_LIST_ERROR", error);
+
+      response.status(500).json({
+        ok: false,
+        message: "Falha ao buscar posts no Supabase.",
+        details: error.message,
+      });
+      return;
+    }
+
+    response.status(200).json({
+      ok: true,
+      items: Array.isArray(data) ? data : [],
+    });
+  } catch (error) {
+    console.error("LIST_ROUTE_ERROR", error);
+
+    response.status(500).json({
+      ok: false,
+      message: "Erro interno do servidor.",
+    });
+  }
+});
+
 app.post("/gerar-post", async (request, response) => {
   try {
     const tema = normalizeTheme(request.body?.tema);
