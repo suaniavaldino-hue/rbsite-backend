@@ -7,7 +7,6 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// 🔐 CONFIG SUPABASE
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
@@ -18,29 +17,57 @@ app.get("/", (req, res) => {
 });
 
 app.post("/gerar-post", async (req, res) => {
-  const { tema } = req.body;
+  try {
+    const { tema } = req.body;
 
-  const title = `Seu ${tema} pode estar te fazendo perder clientes`;
-  const content = `Muitas empresas não percebem, mas ${tema} mal estruturado afasta clientes todos os dias. Um site estratégico muda completamente o jogo.`;
-
-  // 💾 SALVAR NO BANCO
-  await supabase.from("contents").insert([
-    {
-      title,
-      type: "post",
-      content,
-      status: "draft"
+    if (!tema) {
+      return res.status(400).json({
+        error: true,
+        message: "O campo 'tema' é obrigatório."
+      });
     }
-  ]);
 
-  res.json({
-    title,
-    content
-  });
+    const title = `Seu ${tema} pode estar te fazendo perder clientes`;
+    const content = `Muitas empresas não percebem, mas ${tema} mal estruturado afasta clientes todos os dias. Um site estratégico muda completamente o jogo.`;
+
+    const { data, error } = await supabase
+      .from("contents")
+      .insert([
+        {
+          title,
+          type: "post",
+          content,
+          status: "draft"
+        }
+      ])
+      .select();
+
+    if (error) {
+      console.error("SUPABASE ERROR:", error);
+      return res.status(500).json({
+        error: true,
+        message: error.message,
+        details: error
+      });
+    }
+
+    return res.json({
+      saved: true,
+      title,
+      content,
+      data
+    });
+  } catch (err) {
+    console.error("SERVER ERROR:", err);
+    return res.status(500).json({
+      error: true,
+      message: err.message
+    });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-console.log("SUPABASE URL:", process.env.SUPABASE_URL);
+
 app.listen(PORT, () => {
-  console.log("Rodando...");
+  console.log(`Rodando na porta ${PORT}`);
 });
