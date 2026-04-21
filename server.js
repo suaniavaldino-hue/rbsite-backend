@@ -40,7 +40,7 @@ app.post("/gerar-post", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
+console.log("SUPABASE URL:", process.env.SUPABASE_URL);
 app.listen(PORT, () => {
   console.log("Rodando...");
 });
