@@ -8,5 +8,6 @@ RUN npm install --omit=dev --no-fund --no-audit
 COPY . .
 
 ENV NODE_ENV=production
+EXPOSE 8080
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
