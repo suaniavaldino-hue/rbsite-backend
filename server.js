@@ -46,6 +46,36 @@ function normalizeTheme(value) {
   return value.trim().replace(/\s+/g, " ").slice(0, 120);
 }
 
+function normalizeFilter(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 40);
+}
+
+function normalizeLimit(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 20;
+  }
+
+  return Math.min(parsed, 100);
+}
+
+function sanitizeSearch(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .trim()
+    .replace(/[,%]/g, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 80);
+}
+
 function buildPostCopy(theme) {
   return {
     title: `Post sobre ${theme}`,
@@ -75,7 +105,7 @@ app.get("/health", (_request, response) => {
   });
 });
 
-app.get("/posts", async (_request, response) => {
+app.get("/posts", async (request, response) => {
   try {
     if (!supabase) {
       response.status(503).json({
@@ -85,11 +115,31 @@ app.get("/posts", async (_request, response) => {
       return;
     }
 
-    const { data, error } = await supabase
+    const status = normalizeFilter(request.query.status);
+    const type = normalizeFilter(request.query.type);
+    const sort = request.query.sort === "oldest" ? "oldest" : "newest";
+    const limit = normalizeLimit(request.query.limit);
+    const search = sanitizeSearch(request.query.q);
+
+    let query = supabase
       .from(env.supabaseTable)
       .select("id, title, type, content, status, created_at")
-      .order("created_at", { ascending: false, nullsFirst: false })
-      .limit(20);
+      .limit(limit)
+      .order("created_at", { ascending: sort === "oldest", nullsFirst: sort === "oldest" });
+
+    if (status && status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    if (type && type !== "all") {
+      query = query.eq("type", type);
+    }
+
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("SUPABASE_LIST_ERROR", error);
@@ -105,6 +155,13 @@ app.get("/posts", async (_request, response) => {
     response.status(200).json({
       ok: true,
       items: Array.isArray(data) ? data : [],
+      filters: {
+        status: status || "all",
+        type: type || "all",
+        sort,
+        q: search,
+        limit,
+      },
     });
   } catch (error) {
     console.error("LIST_ROUTE_ERROR", error);
@@ -137,6 +194,7 @@ app.post("/gerar-post", async (request, response) => {
     }
 
     const { title, content } = buildPostCopy(tema);
+    const createdAt = new Date().toISOString();
 
     const { data, error } = await supabase
       .from(env.supabaseTable)
@@ -146,6 +204,7 @@ app.post("/gerar-post", async (request, response) => {
           type: "post",
           content,
           status: "draft",
+          created_at: createdAt,
         },
       ])
       .select();
