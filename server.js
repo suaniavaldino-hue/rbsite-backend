@@ -1,27 +1,64 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
+
+process.on("uncaughtException", (error) => {
+  console.error("UNCAUGHT_EXCEPTION", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED_REJECTION", reason);
+});
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: "1mb" }));
 
-app.get("/", (req, res) => {
-  res.json({ ok: true });
-});
-
-app.post("/gerar-post", (req, res) => {
-  const { tema } = req.body;
-
-  return res.json({
+app.get("/", (_request, response) => {
+  response.status(200).json({
     ok: true,
-    title: `Post sobre ${tema}`,
-    content: `Conteúdo gerado sobre ${tema}`
+    service: "rbsite-backend",
+    mode: "stable-mock",
   });
 });
 
-const PORT = process.env.PORT || 3000;
+app.get("/health", (_request, response) => {
+  response.status(200).json({
+    ok: true,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("rodando");
+app.post("/gerar-post", (request, response) => {
+  const tema = typeof request.body?.tema === "string" ? request.body.tema.trim() : "";
+
+  if (!tema) {
+    response.status(400).json({
+      ok: false,
+      message: "O campo 'tema' e obrigatorio.",
+    });
+    return;
+  }
+
+  response.status(200).json({
+    ok: true,
+    title: `Post sobre ${tema}`,
+    content: `Conteudo gerado sobre ${tema}`,
+  });
+});
+
+app.use((_request, response) => {
+  response.status(404).json({
+    ok: false,
+    message: "Rota nao encontrada.",
+  });
+});
+
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = "0.0.0.0";
+
+app.listen(PORT, HOST, () => {
+  console.log(`RB Site backend listening on ${HOST}:${PORT}`);
 });
